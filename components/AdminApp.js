@@ -1,5 +1,8 @@
- 'use client';
+'use client';
 import { useState, useEffect, useCallback, useRef } from "react";
+
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
 const storage = {
   async get(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } },
@@ -49,8 +52,8 @@ export default function AdminApp() {
 
   const handleLogout = async () => {
     try {
-      const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
-      await signOut(getAuth());
+      const app = getApps()[0];
+      if (app) await signOut(getAuth(app));
     } catch {}
     setAuth(false); setUser(null); go("login");
   };
@@ -92,8 +95,8 @@ function AdminLogin({ settings, onSuccess }) {
   const recaptchaRef = useRef(null);
 
   const getFirebase = async () => {
-    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
-    const envKey = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_FIREBASE_API_KEY;
+    
+    const envKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     if (!envKey) return null;
     const cfg = { apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY, authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID };
     return getApps().length === 0 ? initializeApp(cfg) : getApps()[0];
@@ -105,7 +108,7 @@ function AdminLogin({ settings, onSuccess }) {
     try {
       const app = await getFirebase();
       if (app) {
-        const { getAuth, signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+        
         const cred = await signInWithEmailAndPassword(getAuth(app), email, pw);
         onSuccess(cred.user); setLoading(false); return;
       }
@@ -128,7 +131,7 @@ function AdminLogin({ settings, onSuccess }) {
     try {
       const app = await getFirebase();
       if (app) {
-        const { getAuth, RecaptchaVerifier, signInWithPhoneNumber } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+        // Phone auth uses top-level imports
         const auth = getAuth(app);
         if (!window._recaptchaVerifier) {
           window._recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaRef.current, { size: "invisible" });
